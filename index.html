@@ -8,10 +8,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<!-- EmailJS SDK AJOUTÉ -->
+<!-- EmailJS SDK -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
-/* ===== STYLES (identiques à avant) ===== */
+/* ===== STYLES ===== */
 :root {
   --bg: #f0f4ff; --white: #ffffff; --card-bg: rgba(255,255,255,0.75);
   --border: rgba(255,255,255,0.9); --shadow: 0 8px 32px rgba(100,120,200,0.13);
@@ -371,7 +371,7 @@ tbody tr:hover td { background:rgba(79,124,255,0.03); }
       <div class="brand-icon">🌤️</div>
       <div class="brand-text">
         <h1>Station Météo IoT - PFE</h1>
-        <p>ESP32 · Firebase · Temps réel</p>
+        <p>ESP32 · Firebase · Temps réel · Alertes Email</p>
       </div>
     </div>
     <div class="header-badges">
@@ -549,29 +549,20 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let mainChart, donutChart;
-let allData = []; // Stockage local des données
-let lastTimestamp = 0;
+let allData = [];
 
 // Initialisation des graphiques
 function initCharts() {
   const ctx = document.getElementById('mainChart').getContext('2d');
   mainChart = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels: [],
-      datasets: [
-        { label: 'Température (°C)', data: [], borderColor: '#ff7043', backgroundColor: 'rgba(255,112,67,0.1)', tension: 0.3, fill: true, pointRadius: 3 },
-        { label: 'Humidité (%)', data: [], borderColor: '#06c0d9', backgroundColor: 'rgba(6,192,217,0.05)', tension: 0.3, fill: true, pointRadius: 3 },
-        { label: 'Luminosité (%)', data: [], borderColor: '#ffb300', backgroundColor: 'rgba(255,179,0,0.05)', tension: 0.3, fill: false, pointRadius: 2 },
-        { label: 'Vent (m/s)', data: [], borderColor: '#845ef7', backgroundColor: 'rgba(132,94,247,0.05)', tension: 0.3, fill: false, pointRadius: 2 }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { ticks: { maxRotation: 0, font: { size: 9 } } } }
-    }
+    data: { labels: [], datasets: [
+      { label: 'Température (°C)', data: [], borderColor: '#ff7043', backgroundColor: 'rgba(255,112,67,0.1)', tension: 0.3, fill: true, pointRadius: 3 },
+      { label: 'Humidité (%)', data: [], borderColor: '#06c0d9', backgroundColor: 'rgba(6,192,217,0.05)', tension: 0.3, fill: true, pointRadius: 3 },
+      { label: 'Luminosité (%)', data: [], borderColor: '#ffb300', backgroundColor: 'rgba(255,179,0,0.05)', tension: 0.3, fill: false, pointRadius: 2 },
+      { label: 'Vent (m/s)', data: [], borderColor: '#845ef7', backgroundColor: 'rgba(132,94,247,0.05)', tension: 0.3, fill: false, pointRadius: 2 }
+    ] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 0, font: { size: 9 } } } } }
   });
   
   const donutCtx = document.getElementById('donutChart').getContext('2d');
@@ -582,24 +573,17 @@ function initCharts() {
   });
 }
 
-// Met à jour l'affichage avec la dernière mesure
+// Met à jour l'affichage
 function updateDisplay(data) {
   if (!data || data.length === 0) return;
-  
   const last = data[data.length - 1];
-  const T = last.temperature;
-  const H = last.humidity;
-  const L = last.light;
-  const W = last.wind;
-  const R = last.rain;
+  const T = last.temperature, H = last.humidity, L = last.light, W = last.wind, R = last.rain;
   
-  // Mise à jour des cartes
   document.getElementById('temp').textContent = T !== undefined ? T.toFixed(1) : '--';
   document.getElementById('hum').textContent = H !== undefined ? Math.round(H) : '--';
   document.getElementById('light').textContent = L !== undefined ? Math.round(L) : '--';
   document.getElementById('wind').textContent = W !== undefined ? W.toFixed(1) : '--';
   
-  // Statuts
   if (T !== undefined) {
     let status = T < 15 ? '❄️ Froid' : T < 25 ? '🌿 Doux' : T < 32 ? '☀️ Chaud' : '🔥 Très chaud';
     document.getElementById('tempStatus').textContent = status;
@@ -636,7 +620,6 @@ function updateDisplay(data) {
     document.getElementById('rainFill').style.width = rainPct + '%';
   }
   
-  // Score de confort
   if (T !== undefined && H !== undefined) {
     let comfort = 100;
     if (T < 18) comfort -= (18 - T) * 3;
@@ -657,7 +640,6 @@ function updateDisplay(data) {
     document.getElementById('dl3').textContent = Math.round(humid/total*100) + '%';
   }
   
-  // Statistiques
   const temps = data.map(d => d.temperature).filter(v => v !== undefined);
   const hums = data.map(d => d.humidity).filter(v => v !== undefined);
   const winds = data.map(d => d.wind).filter(v => v !== undefined);
@@ -671,7 +653,6 @@ function updateDisplay(data) {
   document.getElementById('sCount').textContent = data.length;
   document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('fr-FR');
   
-  // Graphique
   const labels = data.slice(-20).map((_, i) => {
     let d = new Date();
     d.setSeconds(d.getSeconds() - (data.length - i) * 5);
@@ -684,7 +665,6 @@ function updateDisplay(data) {
   mainChart.data.datasets[3].data = data.slice(-20).map(d => d.wind);
   mainChart.update();
   
-  // Historique
   const tbody = document.getElementById('histBody');
   tbody.innerHTML = '';
   data.slice().reverse().slice(0, 15).forEach(d => {
@@ -695,19 +675,11 @@ function updateDisplay(data) {
     let rColor = d.rain < 500 ? 'pill-red' : d.rain < 1500 ? 'pill-orange' : d.rain < 3000 ? 'pill-cyan' : 'pill-green';
     let comfort = d.temperature && d.humidity ? Math.max(0, Math.min(100, Math.round(100 - (Math.abs(d.temperature-22)*3) - (Math.abs(d.humidity-50)*0.6)))) : 50;
     let cColor = comfort > 70 ? 'pill-green' : comfort > 40 ? 'pill-yellow' : 'pill-orange';
-    tbody.innerHTML += `<tr>
-      <td style="font-size:11px;color:var(--muted)">${time}</td>
-      <td><span class="pill ${tColor}">${d.temperature ? d.temperature.toFixed(1)+'°C' : '--'}</span></td>
-      <td>${d.humidity ? Math.round(d.humidity)+'%' : '--'}</td>
-      <td>${d.light ? Math.round(d.light)+'%' : '--'}</td>
-      <td><span class="pill ${wColor}">${d.wind ? d.wind.toFixed(1)+' m/s' : '--'}</span></td>
-      <td><span class="pill ${rColor}">${rText}</span></td>
-      <td><span class="pill ${cColor}">${comfort}/100</span></td>
-    </tr>`;
+    tbody.innerHTML += `<tr><td style="font-size:11px;color:var(--muted)">${time}</td><td><span class="pill ${tColor}">${d.temperature ? d.temperature.toFixed(1)+'°C' : '--'}</span></td><td>${d.humidity ? Math.round(d.humidity)+'%' : '--'}</td><td>${d.light ? Math.round(d.light)+'%' : '--'}</td><td><span class="pill ${wColor}">${d.wind ? d.wind.toFixed(1)+' m/s' : '--'}</span></td><td><span class="pill ${rColor}">${rText}</span></td><td><span class="pill ${cColor}">${comfort}/100</span></td></tr>`;
   });
 }
 
-// Écouteur Firebase - mise à jour IMMÉDIATE dès qu'une nouvelle donnée arrive
+// Écouteur Firebase
 db.ref('/mesures').orderByKey().limitToLast(1).on('child_added', (snapshot) => {
   const newData = snapshot.val();
   const exists = allData.some(d => d.timestamp === newData.timestamp);
@@ -718,12 +690,10 @@ db.ref('/mesures').orderByKey().limitToLast(1).on('child_added', (snapshot) => {
   }
 });
 
-// Chargement initial des 20 dernières mesures
+// Chargement initial
 db.ref('/mesures').limitToLast(20).once('value', (snapshot) => {
   allData = [];
-  snapshot.forEach(child => {
-    allData.push(child.val());
-  });
+  snapshot.forEach(child => allData.push(child.val()));
   allData.sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
   if (allData.length) updateDisplay(allData);
 });
@@ -731,29 +701,24 @@ db.ref('/mesures').limitToLast(20).once('value', (snapshot) => {
 initCharts();
 
 // ============================================
-// PARTIE EMAILJS - ALERTES (AJOUTÉE SANS MODIFIER LE RESTE)
+// SYSTÈME D'ALERTE EMAIL - VERSION FINALE
 // ============================================
 
-// Initialisation EmailJS
 emailjs.init("ADkkgM7YtQsr9NWnGGocM");
 
-// Template ID
 const TEMPLATE_ID = "template_a1w48ym";
-const SERVICE_ID = "default_service";
+const SERVICE_ID = "service_xr9mz1k";
 
-// Seuils d'alerte
 const SEUILS_ALERTE = {
     temperature: { min: 5, max: 35 },
     humidite: { max: 80 },
     vent: { max: 10 },
-    luminosite: { min: 10 , max: 70},
+    luminosite: { min: 10, max: 70 },
     pluie: { max: 500 }
 };
 
-// Stockage des dernières alertes (anti-spam)
 let dernieresAlertesEnvoyees = {};
 
-// Fonction pour envoyer un email d'alerte
 async function envoyerEmailAlerte(message, mesures) {
     const maintenant = new Date();
     const date = maintenant.toLocaleDateString('fr-FR');
@@ -786,10 +751,11 @@ async function envoyerEmailAlerte(message, mesures) {
     }
 }
 
-// Vérification des seuils
 function verifierSeuilsEtAlerter(mesures) {
     const { temperature, humidite, luminosite, vent, pluie } = mesures;
     let alertes = [];
+    
+    console.log(`🔍 Vérification - Temp: ${temperature}°C, Lum: ${luminosite}%, Hum: ${humidite}%`);
     
     if (temperature > SEUILS_ALERTE.temperature.max) {
         alertes.push(`🌡️ TEMPÉRATURE TROP ÉLEVÉE : ${temperature}°C (max: ${SEUILS_ALERTE.temperature.max}°C)`);
@@ -809,9 +775,15 @@ function verifierSeuilsEtAlerter(mesures) {
         alertes.push(`🌙 LUMINOSITÉ TRÈS FAIBLE : ${luminosite}% (min: ${SEUILS_ALERTE.luminosite.min}%)`);
     }
     
+    if (luminosite > SEUILS_ALERTE.luminosite.max) {
+        alertes.push(`☀️ LUMINOSITÉ TROP ÉLEVÉE : ${luminosite}% (max: ${SEUILS_ALERTE.luminosite.max}%)`);
+    }
+    
     if (pluie < SEUILS_ALERTE.pluie.max) {
         alertes.push(`🌧️ PLUIE INTENSE DÉTECTÉE !`);
     }
+    
+    console.log(`📋 Alertes détectées: ${alertes.length}`);
     
     for (const alerte of alertes) {
         const maintenant = Date.now();
@@ -820,13 +792,8 @@ function verifierSeuilsEtAlerter(mesures) {
             dernieresAlertesEnvoyees[alerte] = maintenant;
         }
     }
-    
-    if (alertes.length > 0) {
-        console.log(`🚨 ${alertes.length} alerte(s) détectée(s)`);
-    }
 }
 
-// Surveillance Firebase pour les alertes
 async function surveillerPourAlertes() {
     try {
         const snapshot = await db.ref('/mesures').limitToLast(1).once('value');
@@ -849,11 +816,12 @@ async function surveillerPourAlertes() {
     }
 }
 
-// Lancement de la surveillance toutes les 30 secondes
 setInterval(surveillerPourAlertes, 30000);
 surveillerPourAlertes();
 
-console.log("📧 Système d'alerte EmailJS activé - Seuils: Temp(5-35°C), Hum(<80%), Vent(<10m/s)");
+console.log("📧 Système d'alerte EmailJS activé - Service: " + SERVICE_ID);
+console.log("🔔 Seuils: Temp(5-35°C), Hum(<80%), Vent(<10m/s), Lum(10-70%)");
+console.log("✅ Station Météo opérationnelle - https://hamzadabbabi1.github.io/station-meteo/");
 </script>
 </body>
 </html>
