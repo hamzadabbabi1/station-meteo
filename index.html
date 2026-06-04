@@ -8,8 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<!-- EmailJS SDK -->
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- EmailJS SDK - Version stable -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <style>
 /* ===== STYLES ===== */
 :root {
@@ -517,22 +517,22 @@ tbody tr:hover td { background:rgba(79,124,255,0.03); }
       <div class="table-wrap">
         <table>
           <thead><tr><th>Heure</th><th>Température</th><th>Humidité</th><th>Luminosité</th><th>Vent</th><th>Pluie</th><th>Confort</th></tr></thead>
-          <tbody id="histBody"><tr><td colspan="7" style="text-align:center;padding:24px">Chargement...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+          <tbody id="histBody"><tr><td colspan="7" style="text-align:center;padding:24px">Chargement...<\/td><\/tr><\/tbody>
+        <\/table>
+      <\/div>
+    <\/div>
     <div class="glass stats-card">
-      <div class="card-title" style="margin-bottom:4px">📊 Statistiques</div>
-      <div class="card-sub" style="margin-bottom:16px">Session en cours</div>
-      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--orange-pale)">🔺</div><div class="stat-name">Temp. max</div></div><div class="stat-val" id="sMaxT">--</div></div>
-      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--cyan-pale)">🔻</div><div class="stat-name">Temp. min</div></div><div class="stat-val" id="sMinT">--</div></div>
-      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:#f3effe">📊</div><div class="stat-name">Moy. temp</div></div><div class="stat-val" id="sAvgT">--</div></div>
-      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--cyan-pale)">💧</div><div class="stat-name">Hum. moy.</div></div><div class="stat-val" id="sAvgH">--</div></div>
-      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--purple-pale)">💨</div><div class="stat-name">Vent max</div></div><div class="stat-val" id="sMaxW">--</div></div>
-      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--blue-pale)">📡</div><div class="stat-name">Mesures reçues</div></div><div class="stat-val" id="sCount">0</div></div>
-    </div>
-  </div>
-</div>
+      <div class="card-title" style="margin-bottom:4px">📊 Statistiques<\/div>
+      <div class="card-sub" style="margin-bottom:16px">Session en cours<\/div>
+      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--orange-pale)">🔺<\/div><div class="stat-name">Temp. max<\/div><\/div><div class="stat-val" id="sMaxT">--<\/div><\/div>
+      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--cyan-pale)">🔻<\/div><div class="stat-name">Temp. min<\/div><\/div><div class="stat-val" id="sMinT">--<\/div><\/div>
+      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:#f3effe">📊<\/div><div class="stat-name">Moy. temp<\/div><\/div><div class="stat-val" id="sAvgT">--<\/div><\/div>
+      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--cyan-pale)">💧<\/div><div class="stat-name">Hum. moy.<\/div><\/div><div class="stat-val" id="sAvgH">--<\/div><\/div>
+      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--purple-pale)">💨<\/div><div class="stat-name">Vent max<\/div><\/div><div class="stat-val" id="sMaxW">--<\/div><\/div>
+      <div class="stat-item"><div class="stat-left"><div class="stat-icon" style="background:var(--blue-pale)">📡<\/div><div class="stat-name">Mesures reçues<\/div><\/div><div class="stat-val" id="sCount">0<\/div><\/div>
+    <\/div>
+  <\/div>
+<\/div>
 <script>
 // ===== FIREBASE CONFIGURATION =====
 const firebaseConfig = {
@@ -582,6 +582,7 @@ function updateDisplay(data) {
   document.getElementById('temp').textContent = T !== undefined ? T.toFixed(1) : '--';
   document.getElementById('hum').textContent = H !== undefined ? Math.round(H) : '--';
   document.getElementById('light').textContent = L !== undefined ? Math.round(L) : '--';
+  document.getElementById('wind').textContent = W !== undefined ? W.toFixed(1) : '--';
   document.getElementById('wind').textContent = W !== undefined ? W.toFixed(1) : '--';
   
   if (T !== undefined) {
@@ -675,7 +676,14 @@ function updateDisplay(data) {
     let rColor = d.rain < 500 ? 'pill-red' : d.rain < 1500 ? 'pill-orange' : d.rain < 3000 ? 'pill-cyan' : 'pill-green';
     let comfort = d.temperature && d.humidity ? Math.max(0, Math.min(100, Math.round(100 - (Math.abs(d.temperature-22)*3) - (Math.abs(d.humidity-50)*0.6)))) : 50;
     let cColor = comfort > 70 ? 'pill-green' : comfort > 40 ? 'pill-yellow' : 'pill-orange';
-    tbody.innerHTML += `<tr><td style="font-size:11px;color:var(--muted)">${time}</td><td><span class="pill ${tColor}">${d.temperature ? d.temperature.toFixed(1)+'°C' : '--'}</span></td><td>${d.humidity ? Math.round(d.humidity)+'%' : '--'}</td><td>${d.light ? Math.round(d.light)+'%' : '--'}</td><td><span class="pill ${wColor}">${d.wind ? d.wind.toFixed(1)+' m/s' : '--'}</span></td><td><span class="pill ${rColor}">${rText}</span></td><td><span class="pill ${cColor}">${comfort}/100</span></td></tr>`;
+    tbody.innerHTML += `<tr><td style="font-size:11px;color:var(--muted)">${time}<\/td>
+      <td><span class="pill ${tColor}">${d.temperature ? d.temperature.toFixed(1)+'°C' : '--'}<\/span><\/td>
+      <td>${d.humidity ? Math.round(d.humidity)+'%' : '--'}<\/td>
+      <td>${d.light ? Math.round(d.light)+'%' : '--'}<\/td>
+      <td><span class="pill ${wColor}">${d.wind ? d.wind.toFixed(1)+' m/s' : '--'}<\/span><\/td>
+      <td><span class="pill ${rColor}">${rText}<\/span><\/td>
+      <td><span class="pill ${cColor}">${comfort}\/100<\/span><\/td>
+    </tr>`;
   });
 }
 
@@ -701,9 +709,10 @@ db.ref('/mesures').limitToLast(20).once('value', (snapshot) => {
 initCharts();
 
 // ============================================
-// SYSTÈME D'ALERTE EMAIL - CORRECTION FINALE
+// SYSTÈME D'ALERTE EMAIL - VERSION CORRIGÉE
 // ============================================
 
+// Initialisation EmailJS (version 3 stable)
 emailjs.init("ADkkgM7YtQsr9NWnGGocM");
 
 const TEMPLATE_ID = "template_a1w48ym";
@@ -742,11 +751,11 @@ async function envoyerEmailAlerte(message, mesures) {
     };
     
     try {
-        await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams);
-        console.log("✅ Email d'alerte envoyé !");
+        const response = await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams);
+        console.log("✅ Email d'alerte envoyé !", response);
         return true;
     } catch (error) {
-        console.error("❌ Erreur envoi email:", error);
+        console.error("❌ Erreur envoi email:", error.text || error);
         return false;
     }
 }
@@ -774,7 +783,7 @@ function verifierSeuilsEtAlerter(mesures) {
         alertes.push(`💨 VENT TRÈS FORT : ${vent} m/s (max: ${SEUILS_ALERTE.vent.max} m/s)`);
     }
     
-    // Luminosité TROP ÉLEVÉE
+    // Luminosité TROP ÉLEVÉE (votre test à 91%)
     if (luminosite > SEUILS_ALERTE.luminosite.max) {
         alertes.push(`☀️ LUMINOSITÉ TROP ÉLEVÉE : ${luminosite}% (max: ${SEUILS_ALERTE.luminosite.max}%)`);
         console.log("⚠️ Alerte luminosité déclenchée !");
@@ -828,8 +837,8 @@ async function surveillerPourAlertes() {
     }
 }
 
-// Surveillance toutes les 15 secondes
-setInterval(surveillerPourAlertes, 15000);
+// Surveillance toutes les 10 secondes
+setInterval(surveillerPourAlertes, 10000);
 surveillerPourAlertes();
 
 console.log("📧 Système d'alerte EmailJS activé - Service: " + SERVICE_ID);
