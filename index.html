@@ -701,7 +701,7 @@ db.ref('/mesures').limitToLast(20).once('value', (snapshot) => {
 initCharts();
 
 // ============================================
-// SYSTÈME D'ALERTE EMAIL - VERSION FINALE
+// SYSTÈME D'ALERTE EMAIL - CORRECTION FINALE
 // ============================================
 
 emailjs.init("ADkkgM7YtQsr9NWnGGocM");
@@ -757,40 +757,51 @@ function verifierSeuilsEtAlerter(mesures) {
     
     console.log(`🔍 Vérification - Temp: ${temperature}°C, Lum: ${luminosite}%, Hum: ${humidite}%`);
     
+    // Température
     if (temperature > SEUILS_ALERTE.temperature.max) {
         alertes.push(`🌡️ TEMPÉRATURE TROP ÉLEVÉE : ${temperature}°C (max: ${SEUILS_ALERTE.temperature.max}°C)`);
     } else if (temperature < SEUILS_ALERTE.temperature.min) {
         alertes.push(`❄️ TEMPÉRATURE TROP BASSE : ${temperature}°C (min: ${SEUILS_ALERTE.temperature.min}°C)`);
     }
     
+    // Humidité
     if (humidite > SEUILS_ALERTE.humidite.max) {
         alertes.push(`💧 HUMIDITÉ TROP ÉLEVÉE : ${humidite}% (max: ${SEUILS_ALERTE.humidite.max}%)`);
     }
     
+    // Vent
     if (vent > SEUILS_ALERTE.vent.max) {
         alertes.push(`💨 VENT TRÈS FORT : ${vent} m/s (max: ${SEUILS_ALERTE.vent.max} m/s)`);
     }
     
+    // Luminosité TROP ÉLEVÉE
+    if (luminosite > SEUILS_ALERTE.luminosite.max) {
+        alertes.push(`☀️ LUMINOSITÉ TROP ÉLEVÉE : ${luminosite}% (max: ${SEUILS_ALERTE.luminosite.max}%)`);
+        console.log("⚠️ Alerte luminosité déclenchée !");
+    }
+    
+    // Luminosité TROP FAIBLE
     if (luminosite < SEUILS_ALERTE.luminosite.min) {
         alertes.push(`🌙 LUMINOSITÉ TRÈS FAIBLE : ${luminosite}% (min: ${SEUILS_ALERTE.luminosite.min}%)`);
     }
     
-    if (luminosite > SEUILS_ALERTE.luminosite.max) {
-        alertes.push(`☀️ LUMINOSITÉ TROP ÉLEVÉE : ${luminosite}% (max: ${SEUILS_ALERTE.luminosite.max}%)`);
-    }
-    
+    // Pluie
     if (pluie < SEUILS_ALERTE.pluie.max) {
         alertes.push(`🌧️ PLUIE INTENSE DÉTECTÉE !`);
     }
     
-    console.log(`📋 Alertes détectées: ${alertes.length}`);
-    
-    for (const alerte of alertes) {
-        const maintenant = Date.now();
-        if (!dernieresAlertesEnvoyees[alerte] || (maintenant - dernieresAlertesEnvoyees[alerte]) > 3600000) {
-            envoyerEmailAlerte(alerte, mesures);
-            dernieresAlertesEnvoyees[alerte] = maintenant;
+    if (alertes.length > 0) {
+        console.log(`📋 ${alertes.length} alerte(s) détectée(s)`);
+        for (const alerte of alertes) {
+            const maintenant = Date.now();
+            const cle = alerte.substring(0, 50);
+            if (!dernieresAlertesEnvoyees[cle] || (maintenant - dernieresAlertesEnvoyees[cle]) > 3600000) {
+                envoyerEmailAlerte(alerte, mesures);
+                dernieresAlertesEnvoyees[cle] = maintenant;
+            }
         }
+    } else {
+        console.log("✅ Toutes les valeurs sont normales");
     }
 }
 
@@ -802,6 +813,7 @@ async function surveillerPourAlertes() {
             const keys = Object.keys(data);
             if (keys.length > 0) {
                 const derniere = data[keys[0]];
+                console.log("📡 Dernière mesure reçue:", derniere);
                 verifierSeuilsEtAlerter({
                     temperature: derniere.temperature || 0,
                     humidite: derniere.humidity || 0,
@@ -816,12 +828,13 @@ async function surveillerPourAlertes() {
     }
 }
 
-setInterval(surveillerPourAlertes, 30000);
+// Surveillance toutes les 15 secondes
+setInterval(surveillerPourAlertes, 15000);
 surveillerPourAlertes();
 
 console.log("📧 Système d'alerte EmailJS activé - Service: " + SERVICE_ID);
 console.log("🔔 Seuils: Temp(5-35°C), Hum(<80%), Vent(<10m/s), Lum(10-70%)");
-console.log("✅ Station Météo opérationnelle - https://hamzadabbabi1.github.io/station-meteo/");
+console.log("✅ Station Météo opérationnelle - Luminosité > 70% envoie une alerte");
 </script>
 </body>
 </html>
